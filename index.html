@@ -3,173 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>History Test System</title>
+<title>Практична робота 9 клас</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-slate-100 p-6">
+<body class="bg-slate-100 p-4">
 
 <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
 
-<h1 class="text-xl font-bold mb-4">🏛️ Практична робота</h1>
+<h1 class="text-2xl font-bold mb-4">🏛️ Практична робота</h1>
 
-<div id="startScreen">
-<input id="fullname" placeholder="Прізвище Ім'я"
-class="border p-2 w-full mb-3">
-
-<input id="class" placeholder="Клас (9-А / 9-Б)"
-class="border p-2 w-full mb-3">
-
-<button onclick="startTest()" class="bg-blue-600 text-white px-4 py-2 rounded">
-Почати
-</button>
-
-<p id="error" class="text-red-600 mt-2"></p>
+<!-- AUTH -->
+<div id="auth">
+<input id="name" placeholder="Прізвище Ім'я" class="border p-2 w-full mb-2">
+<input id="class" placeholder="Клас (9-А)" class="border p-2 w-full mb-2">
+<input id="code" placeholder="Код доступу" class="border p-2 w-full mb-2">
+<button onclick="start()" class="bg-blue-600 text-white px-4 py-2 rounded">Старт</button>
+<p id="error" class="text-red-600"></p>
 </div>
 
+<!-- TEST -->
 <div id="test" class="hidden">
-<p>⏱️ <span id="timer">40:00</span></p>
-<p>Питання: <span id="qnum">1</span></p>
-<div id="questionBlock"></div>
+<p>⏱ <span id="timer">40:00</span></p>
+<div id="question"></div>
 </div>
 
+<!-- RESULT -->
 <div id="result" class="hidden">
 <h2 class="text-xl font-bold">Результат</h2>
 <p id="final"></p>
+<canvas id="chart"></canvas>
 </div>
 
 </div>
 
 <script>
+const SCRIPT_URL = "ВСТАВ_СВІЙ_APPS_SCRIPT_URL";
+const ACCESS_CODE = "1234";
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKyHiGk79_oLF9M1liaQ03f906rHcuU_y0w0l1lll1vXRL85MzgcxMaXDoAwaUdN6l/exec";
+let student={},score=0,index=0,startTime;
 
-let student = {};
-let score = 0;
-let totalTime = 40*60;
-let currentIndex = 0;
-
-const questions = [
-{q:"Хто автор ідеї самостійності?",a:["Міхновський","Грушевський","Драгоманов"],c:0},
-{q:"РУП орієнтувалась на:",a:["соціалізм","монархію","консерватизм"],c:0},
-{q:"ТУП виступала за:",a:["реформи","революцію","диктатуру"],c:0},
-{q:"Що означає автономія?",a:["самоврядування","незалежність","окупація"],c:0},
-{q:"Що означає самостійність?",a:["незалежність","реформи","підпорядкування"],c:0},
-{q:"Хто радикальніший?",a:["УНП","ТУП","жодна"],c:0}
+let questions=[
+{q:"Хто за самостійність?",a:["Міхновський","Грушевський"],c:0},
+{q:"РУП це?",a:["соціалісти","монархісти"],c:0},
+{q:"Автономія це?",a:["самоврядування","незалежність"],c:0}
 ];
 
-function startTest(){
+function start(){
+let n=name.value.trim();
+let c=class.value.trim();
+let cd=code.value.trim();
 
-let name = fullname.value.trim();
-let cls = document.getElementById("class").value.trim();
+if(n.split(" ").length<2){error.innerText="Введи ПІБ";return;}
+if(cd!==ACCESS_CODE){error.innerText="Невірний код";return;}
 
-if(name.split(" ").length < 2){
-error.innerText = "Введи Прізвище Ім'я";
-return;
-}
+student={n,c};
+startTime=Date.now();
 
-if(!cls){
-error.innerText = "Введи клас";
-return;
-}
-
-student = {name, cls};
-
-startScreen.style.display="none";
+auth.style.display="none";
 test.classList.remove("hidden");
 
-startTimer();
-nextQuestion();
+timerStart();
+next();
 }
 
-function startTimer(){
+function timerStart(){
+let t=2400;
 setInterval(()=>{
-totalTime--;
-let m = Math.floor(totalTime/60);
-let s = totalTime%60;
-timer.innerText = `${m}:${s.toString().padStart(2,'0')}`;
-if(totalTime<=0) finish();
+t--;
+timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,'0');
+if(t<=0) finish();
 },1000);
 }
 
-function shuffle(arr){
-return arr.sort(()=>Math.random()-0.5);
+function next(){
+if(index>=questions.length){finish();return;}
+
+let q=questions[index];
+question.innerHTML=`<p>${q.q}</p>`+
+q.a.map((x,i)=>`<button onclick="ans(${i===q.c})" class="block border p-2 mt-2 w-full">${x}</button>`).join("");
+index++;
 }
 
-function nextQuestion(){
-
-if(currentIndex >= questions.length){
-finish();
-return;
-}
-
-qnum.innerText = currentIndex+1;
-
-let q = questions[currentIndex];
-let answers = shuffle([...q.a]);
-let correctIndex = answers.indexOf(q.a[q.c]);
-
-questionBlock.innerHTML = `
-<p>${q.q}</p>
-${answers.map((ans,i)=>
-`<button onclick="answer(${i===correctIndex})"
-class="block w-full border p-2 mt-2">${ans}</button>`
-).join("")}
-`;
-
-currentIndex++;
-}
-
-let lock=false;
-
-function answer(correct){
-if(lock) return;
-lock=true;
-if(correct) score++;
-
-setTimeout(()=>{
-lock=false;
-nextQuestion();
-},500);
+function ans(c){
+if(c) score++;
+next();
 }
 
 async function finish(){
 
 test.classList.add("hidden");
 
-let grade = Math.round((score/questions.length)*12);
+let grade=Math.round((score/questions.length)*12);
+let time=Math.floor((Date.now()-startTime)/1000);
 
-let response = await fetch(SCRIPT_URL,{
+let res=await fetch(SCRIPT_URL,{
 method:"POST",
-body: JSON.stringify({
-name: student.name,
-class: student.cls,
-score: score,
-grade: grade,
-project: "history_9_autonomy"
+body:JSON.stringify({
+name:student.n,
+class:student.c,
+score:score,
+grade:grade,
+timeSpent:time,
+project:"history9"
 })
 });
 
-let resultData = await response.json();
+let data=await res.json();
 
 result.classList.remove("hidden");
 
-if(resultData.status === "denied"){
-final.innerText = "⛔ Вас немає у списку";
-return;
+if(data.status==="denied"){final.innerText="Немає у списку";return;}
+if(data.status==="exists"){final.innerText="Вже проходив";return;}
+
+final.innerText=`${student.n} → ${grade} балів`;
+
+new Chart(document.getElementById('chart'),{
+type:'bar',
+data:{labels:["Бали"],datasets:[{data:[grade]}]}
+});
 }
 
-if(resultData.status === "exists"){
-final.innerText = "❌ Ви вже проходили тест";
-return;
-}
+window.onbeforeunload=()=>true;
+</script>
 
-final.innerText =
-`${student.name} (${student.cls}) → ${score}/${questions.length} → ${grade}`;
-}
-
-window.onbeforeunload = () => "Тест буде завершено!";
-
+</body>
+</html>
 </script>
 
 </body>
