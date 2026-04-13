@@ -1,191 +1,146 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Практична робота 9 клас</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<title>Практична робота (AI)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px}
+.hidden{display:none}
+textarea{width:100%;height:120px;margin:10px 0}
+button{padding:10px;margin-top:10px}
+</style>
 </head>
-<body class="bg-slate-100 p-4">
-  <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
-    <h1 class="text-2xl font-bold mb-4">🏛️ Практична робота</h1>
 
-    <!-- AUTH -->
-    <div id="auth">
-      <input id="name" placeholder="Прізвище Ім'я" class="border p-2 w-full mb-2">
-      <input id="studentClass" placeholder="Клас (9-А)" class="border p-2 w-full mb-2">
-      <input id="code" placeholder="Код доступу" class="border p-2 w-full mb-2">
+<body>
 
-      <button id="startBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Старт</button>
-      <p id="error" class="text-red-600 mt-2"></p>
-    </div>
+<h2>Практична робота</h2>
 
-    <!-- TEST -->
-    <div id="test" class="hidden">
-      <p>⏱ <span id="timer">40:00</span></p>
-      <div id="question" class="mt-3"></div>
-    </div>
+<div id="start">
+<input id="name" placeholder="Прізвище Ім'я"><br><br>
+<input id="class" placeholder="Клас"><br><br>
+<input id="code" placeholder="Код доступу"><br><br>
 
-    <!-- RESULT -->
-    <div id="result" class="hidden">
-      <h2 class="text-xl font-bold">Результат</h2>
-      <p id="final"></p>
-      <canvas id="chart"></canvas>
-    </div>
-  </div>
+<button onclick="startTest()">Старт</button>
+</div>
 
-  <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY8BkKYfKl5eglNewhdltC8x_lGXkGdfzxg2Ql2PaCQpdvE-8pXh0OcOwmYMTmtxj8/exec";
-    const ACCESS_CODE = "1234";
+<div id="test" class="hidden">
 
-    const auth = document.getElementById("auth");
-    const test = document.getElementById("test");
-    const result = document.getElementById("result");
-    const questionEl = document.getElementById("question");
-    const timerEl = document.getElementById("timer");
-    const finalEl = document.getElementById("final");
-    const errorEl = document.getElementById("error");
-    const nameEl = document.getElementById("name");
-    const classEl = document.getElementById("studentClass");
-    const codeEl = document.getElementById("code");
+<p id="timer"></p>
 
-    let student = {};
-    let score = 0;
-    let index = 0;
-    let startTime = 0;
-    let timerId = null;
-    let finished = false;
+<h3>Частина 1</h3>
+<textarea id="p1"></textarea>
 
-    const questions = [
-      { q: "Хто за самостійність?", a: ["Міхновський", "Грушевський"], c: 0 },
-      { q: "РУП це?", a: ["соціалісти", "монархісти"], c: 0 },
-      { q: "Автономія це?", a: ["самоврядування", "незалежність"], c: 0 }
-    ];
+<h3>Частина 2</h3>
+<textarea id="p2"></textarea>
 
-    document.getElementById("startBtn").addEventListener("click", start);
+<h3>Частина 3</h3>
+<textarea id="p3"></textarea>
 
-    function start() {
-      const n = nameEl.value.trim();
-      const studentClass = classEl.value.trim();
-      const cd = codeEl.value.trim();
+<button onclick="finish()">Завершити</button>
 
-      errorEl.innerText = "";
+</div>
 
-      if (n.split(" ").filter(Boolean).length < 2) {
-        errorEl.innerText = "Введи ПІБ";
-        return;
-      }
-      if (!studentClass) {
-        errorEl.innerText = "Введи клас";
-        return;
-      }
-      if (cd !== ACCESS_CODE) {
-        errorEl.innerText = "Невірний код";
-        return;
-      }
+<div id="result" class="hidden">
+<h3>Результат</h3>
+<div id="final"></div>
+<canvas id="chart"></canvas>
+</div>
 
-      student = { n, c: studentClass };
-      score = 0;
-      index = 0;
-      finished = false;
-      startTime = Date.now();
+<script>
 
-      auth.style.display = "none";
-      test.classList.remove("hidden");
+const SCRIPT_URL="ВСТАВ_СВІЙ_URL";
+const ACCESS_CODE="1234";
 
-      timerStart();
-      next();
-    }
+let startTime;
+let timeLimit=40*60;
+let timerInterval;
 
-    function timerStart() {
-      let t = 2400;
-      timerEl.innerText = "40:00";
+function startTest(){
 
-      if (timerId) clearInterval(timerId);
+if(code.value!==ACCESS_CODE){
+alert("Невірний код");
+return;
+}
 
-      timerId = setInterval(() => {
-        t--;
-        timerEl.innerText = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
-        if (t <= 0) finish();
-      }, 1000);
-    }
+fetch(SCRIPT_URL,{
+method:"POST",
+body:JSON.stringify({
+action:"checkAttempt",
+name:name.value
+})
+})
+.then(r=>r.text())
+.then(res=>{
+if(res==="BLOCK"){
+alert("Ви вже проходили тест");
+return;
+}
 
-    function next() {
-      if (index >= questions.length) {
-        finish();
-        return;
-      }
+start.classList.add("hidden");
+test.classList.remove("hidden");
 
-      const q = questions[index];
-      questionEl.innerHTML = `<p class="font-medium">${q.q}</p>` +
-        q.a
-          .map((x, i) => `<button data-correct="${i === q.c}" class="block border p-2 mt-2 w-full rounded hover:bg-slate-100">${x}</button>`)
-          .join("");
+startTime=Date.now();
+startTimer();
 
-      questionEl.querySelectorAll("button").forEach((btn) => {
-        btn.addEventListener("click", () => ans(btn.dataset.correct === "true"));
-      });
+});
+}
 
-      index++;
-    }
+function startTimer(){
+timerInterval=setInterval(()=>{
+let t=timeLimit-Math.floor((Date.now()-startTime)/1000);
+timer.innerText="Час: "+t+" сек";
 
-    function ans(correct) {
-      if (correct) score++;
-      next();
-    }
+if(t<=0){
+clearInterval(timerInterval);
+finish();
+}
+},1000);
+}
 
-    async function finish() {
-      if (finished) return;
-      finished = true;
+function finish(){
 
-      if (timerId) clearInterval(timerId);
-      test.classList.add("hidden");
+clearInterval(timerInterval);
 
-      const grade = Math.round((score / questions.length) * 12);
-      const time = Math.floor((Date.now() - startTime) / 1000);
+fetch(SCRIPT_URL,{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+action:"submit",
+name:name.value,
+class:class.value,
+p1:p1.value,
+p2:p2.value,
+p3:p3.value,
+time:Math.floor((Date.now()-startTime)/1000)
+})
+})
+.then(r=>r.json())
+.then(ai=>{
 
-      result.classList.remove("hidden");
+test.classList.add("hidden");
+result.classList.remove("hidden");
 
-      try {
-        const res = await fetch(SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({
-            name: student.n,
-            class: student.c,
-            score,
-            grade,
-            timeSpent: time,
-            project: "history9"
-          })
-        });
+final.innerHTML=`
+Бал: ${ai.total}/12 <br>
+Рівень: ${ai.level}<br><br>
+${ai.comment}
+`;
 
-        const data = await res.json();
+new Chart(chart,{
+type:"bar",
+data:{
+labels:["1","2","3"],
+datasets:[{data:[ai.p1,ai.p2,ai.p3]}]
+}
+});
 
-        if (data.status === "denied") {
-          finalEl.innerText = "Немає у списку";
-          return;
-        }
-        if (data.status === "exists") {
-          finalEl.innerText = "Вже проходив";
-          return;
-        }
-      } catch (e) {
-        finalEl.innerText = "Результат збережено локально, але не вдалося відправити на сервер.";
-      }
+});
+}
 
-      finalEl.innerText = `${student.n} → ${grade} балів`;
+</script>
 
-      new Chart(document.getElementById("chart"), {
-        type: "bar",
-        data: {
-          labels: ["Бали"],
-          datasets: [{ data: [grade] }]
-        }
-      });
-    }
-
-    window.onbeforeunload = () => !finished || null;
-  </script>
 </body>
 </html>
