@@ -1,140 +1,201 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Практична робота 9 клас</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Практична робота 9 клас</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body class="bg-slate-100 p-4">
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
+    <h1 class="text-2xl font-bold mb-4">🏛️ Практична робота</h1>
 
-<div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
+    <!-- AUTH -->
+    <div id="auth">
+      <input id="name" placeholder="Прізвище Ім'я" class="border p-2 w-full mb-2">
+      <input id="studentClass" placeholder="Клас (9-А)" class="border p-2 w-full mb-2">
+      <input id="code" placeholder="Код доступу" class="border p-2 w-full mb-2">
 
-<h1 class="text-2xl font-bold mb-4">🏛️ Практична робота</h1>
+      <button id="startBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Старт</button>
+      <p id="error" class="text-red-600 mt-2"></p>
+    </div>
 
-<!-- AUTH -->
-<div id="auth">
-<input id="name" placeholder="Прізвище Ім'я" class="border p-2 w-full mb-2">
-<input id="studentClass" placeholder="Клас (9-А)" class="border p-2 w-full mb-2">
-<input id="code" placeholder="Код доступу" class="border p-2 w-full mb-2">
+    <!-- TEST -->
+    <div id="test" class="hidden">
+      <p>⏱ <span id="timer">40:00</span></p>
+      <div id="question" class="mt-3"></div>
+    </div>
 
-<button onclick="start()" class="bg-blue-600 text-white px-4 py-2 rounded">
-Старт
-</button>
+    <!-- RESULT -->
+    <div id="result" class="hidden">
+      <h2 class="text-xl font-bold">Результат</h2>
+      <p id="final"></p>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
 
-<p id="error" class="text-red-600"></p>
-</div>
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY8BkKYfKl5eglNewhdltC8x_lGXkGdfzxg2Ql2PaCQpdvE-8pXh0OcOwmYMTmtxj8/exec";
+    const ACCESS_CODE = "1234";
 
-<!-- TEST -->
-<div id="test" class="hidden">
-<p>⏱ <span id="timer">40:00</span></p>
-<div id="question"></div>
-</div>
+    const auth = document.getElementById("auth");
+    const test = document.getElementById("test");
+    const result = document.getElementById("result");
+    const questionEl = document.getElementById("question");
+    const timerEl = document.getElementById("timer");
+    const finalEl = document.getElementById("final");
+    const errorEl = document.getElementById("error");
+    const nameEl = document.getElementById("name");
+    const classEl = document.getElementById("studentClass");
+    const codeEl = document.getElementById("code");
 
-<!-- RESULT -->
-<div id="result" class="hidden">
-<h2 class="text-xl font-bold">Результат</h2>
-<p id="final"></p>
-<canvas id="chart"></canvas>
-</div>
+    let student = {};
+    let score = 0;
+    let index = 0;
+    let startTime = 0;
+    let timerId = null;
+    let finished = false;
+    let chartInstance = null;
 
-</div>
+    const questions = [
+      { q: "Хто за самостійність?", a: ["Міхновський", "Грушевський"], c: 0 },
+      { q: "РУП це?", a: ["соціалісти", "монархісти"], c: 0 },
+      { q: "Автономія це?", a: ["самоврядування", "незалежність"], c: 0 }
+    ];
 
-<script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY8BkKYfKl5eglNewhdltC8x_lGXkGdfzxg2Ql2PaCQpdvE-8pXh0OcOwmYMTmtxj8/exec";
-const ACCESS_CODE = "1234";
+    document.getElementById("startBtn").addEventListener("click", start);
 
-let student={},score=0,index=0,startTime;
+    function start() {
+      const n = nameEl.value.trim();
+      const studentClass = classEl.value.trim();
+      const cd = codeEl.value.trim();
 
-let questions=[
-{q:"Хто за самостійність?",a:["Міхновський","Грушевський"],c:0},
-{q:"РУП це?",a:["соціалісти","монархісти"],c:0},
-{q:"Автономія це?",a:["самоврядування","незалежність"],c:0}
-];
+      errorEl.innerText = "";
 
-function start(){
-let n=name.value.trim();
-let c=class.value.trim();
-let cd=code.value.trim();
+      if (n.split(" ").filter(Boolean).length < 2) {
+        errorEl.innerText = "Введи ПІБ";
+        return;
+      }
+      if (!studentClass) {
+        errorEl.innerText = "Введи клас";
+        return;
+      }
+      if (cd !== ACCESS_CODE) {
+        errorEl.innerText = "Невірний код";
+        return;
+      }
 
-if(n.split(" ").length<2){error.innerText="Введи ПІБ";return;}
-if(cd!==ACCESS_CODE){error.innerText="Невірний код";return;}
+      student = { n, c: studentClass };
+      score = 0;
+      index = 0;
+      finished = false;
+      startTime = Date.now();
 
-student={n,c};
-startTime=Date.now();
+      auth.style.display = "none";
+      test.classList.remove("hidden");
 
-auth.style.display="none";
-test.classList.remove("hidden");
+      timerStart();
+      next();
+    }
 
-timerStart();
-next();
-}
+    function timerStart() {
+      let t = 2400;
+      timerEl.innerText = "40:00";
 
-function timerStart(){
-let t=2400;
-setInterval(()=>{
-t--;
-timer.innerText=Math.floor(t/60)+":"+String(t%60).padStart(2,'0');
-if(t<=0) finish();
-},1000);
-}
+      if (timerId) clearInterval(timerId);
 
-function next(){
-if(index>=questions.length){finish();return;}
+      timerId = setInterval(() => {
+        t--;
+        timerEl.innerText = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+        if (t <= 0) finish();
+      }, 1000);
+    }
 
-let q=questions[index];
-question.innerHTML=`<p>${q.q}</p>`+
-q.a.map((x,i)=>`<button onclick="ans(${i===q.c})" class="block border p-2 mt-2 w-full">${x}</button>`).join("");
-index++;
-}
+    function next() {
+      if (index >= questions.length) {
+        finish();
+        return;
+      }
 
-function ans(c){
-if(c) score++;
-next();
-}
+      const q = questions[index];
+      questionEl.innerHTML = `<p class="font-medium">${q.q}</p>` +
+        q.a
+          .map((x, i) => `<button data-correct="${i === q.c}" class="block border p-2 mt-2 w-full rounded hover:bg-slate-100">${x}</button>`)
+          .join("");
 
-async function finish(){
+      questionEl.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => ans(btn.dataset.correct === "true"));
+      });
 
-test.classList.add("hidden");
+      index++;
+    }
 
-let grade=Math.round((score/questions.length)*12);
-let time=Math.floor((Date.now()-startTime)/1000);
+    function ans(correct) {
+      if (correct) score++;
+      next();
+    }
 
-let res=await fetch(SCRIPT_URL,{
-method:"POST",
-body:JSON.stringify({
-name:student.n,
-class:student.c,
-score:score,
-grade:grade,
-timeSpent:time,
-project:"history9"
-})
-});
+    async function finish() {
+      if (finished) return;
+      finished = true;
 
-let data=await res.json();
+      if (timerId) clearInterval(timerId);
+      test.classList.add("hidden");
 
-result.classList.remove("hidden");
+      const grade = Math.round((score / questions.length) * 12);
+      const time = Math.floor((Date.now() - startTime) / 1000);
 
-if(data.status==="denied"){final.innerText="Немає у списку";return;}
-if(data.status==="exists"){final.innerText="Вже проходив";return;}
+      result.classList.remove("hidden");
 
-final.innerText=`${student.n} → ${grade} балів`;
+      let submitWarning = "";
 
-new Chart(document.getElementById('chart'),{
-type:'bar',
-data:{labels:["Бали"],datasets:[{data:[grade]}]}
-});
-}
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: student.n,
+            class: student.c,
+            score,
+            grade,
+            timeSpent: time,
+            project: "history9"
+          })
+        });
 
-window.onbeforeunload=()=>true;
-</script>
+        if (!res.ok) throw new Error("Bad response");
 
-</body>
-</html>
-</script>
+        const data = await res.json();
 
+        if (data.status === "denied") {
+          finalEl.innerText = "Немає у списку";
+          return;
+        }
+        if (data.status === "exists") {
+          finalEl.innerText = "Вже проходив";
+          return;
+        }
+      } catch (e) {
+        submitWarning = " (не вдалося відправити на сервер)";
+      }
+
+      finalEl.innerText = `${student.n} → ${grade} балів${submitWarning}`;
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(document.getElementById("chart"), {
+        type: "bar",
+        data: {
+          labels: ["Бали"],
+          datasets: [{ data: [grade] }]
+        }
+      });
+    }
+
+    window.onbeforeunload = () => (finished ? undefined : true);
+  </script>
 </body>
 </html>
