@@ -27,7 +27,6 @@ button{padding:10px;margin-top:10px}
 </div>
 
 <div id="test" class="hidden">
-
 <p id="timer"></p>
 
 <h3>Частина 1</h3>
@@ -40,7 +39,6 @@ button{padding:10px;margin-top:10px}
 <textarea id="p3"></textarea>
 
 <button onclick="finish()">Завершити</button>
-
 </div>
 
 <div id="result" class="hidden">
@@ -58,29 +56,50 @@ let startTime;
 let timeLimit=40*60;
 let timerInterval;
 
+// 🔧 DOM
+const nameInput = document.getElementById("name");
+const classInput = document.getElementById("class");
+const codeInput = document.getElementById("code");
+
+const startDiv = document.getElementById("start");
+const testDiv = document.getElementById("test");
+const resultDiv = document.getElementById("result");
+
+const timerEl = document.getElementById("timer");
+const finalEl = document.getElementById("final");
+const chartEl = document.getElementById("chart");
+
+// 🚀 START
 function startTest(){
 
-if(code.value!==ACCESS_CODE){
+if(!nameInput.value){
+alert("Введіть ПІБ");
+return;
+}
+
+if(codeInput.value!==ACCESS_CODE){
 alert("Невірний код");
 return;
 }
 
 fetch(SCRIPT_URL,{
 method:"POST",
+headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 action:"checkAttempt",
-name:name.value
+name:nameInput.value
 })
 })
 .then(r=>r.text())
 .then(res=>{
+
 if(res==="BLOCK"){
 alert("Ви вже проходили тест");
 return;
 }
 
-start.classList.add("hidden");
-test.classList.remove("hidden");
+startDiv.classList.add("hidden");
+testDiv.classList.remove("hidden");
 
 startTime=Date.now();
 startTimer();
@@ -88,10 +107,11 @@ startTimer();
 });
 }
 
+// ⏱ TIMER
 function startTimer(){
 timerInterval=setInterval(()=>{
 let t=timeLimit-Math.floor((Date.now()-startTime)/1000);
-timer.innerText="Час: "+t+" сек";
+timerEl.innerText="Час: "+t+" сек";
 
 if(t<=0){
 clearInterval(timerInterval);
@@ -100,6 +120,7 @@ finish();
 },1000);
 }
 
+// 📤 FINISH
 function finish(){
 
 clearInterval(timerInterval);
@@ -109,27 +130,27 @@ method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 action:"submit",
-name:name.value,
-class:class.value,
-p1:p1.value,
-p2:p2.value,
-p3:p3.value,
+name:nameInput.value,
+studentClass:classInput.value,
+p1:document.getElementById("p1").value,
+p2:document.getElementById("p2").value,
+p3:document.getElementById("p3").value,
 time:Math.floor((Date.now()-startTime)/1000)
 })
 })
 .then(r=>r.json())
 .then(ai=>{
 
-test.classList.add("hidden");
-result.classList.remove("hidden");
+testDiv.classList.add("hidden");
+resultDiv.classList.remove("hidden");
 
-final.innerHTML=`
+finalEl.innerHTML=`
 Бал: ${ai.total}/12 <br>
 Рівень: ${ai.level}<br><br>
 ${ai.comment}
 `;
 
-new Chart(chart,{
+new Chart(chartEl,{
 type:"bar",
 data:{
 labels:["1","2","3"],
