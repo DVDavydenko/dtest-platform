@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Практична робота (AI)</title>
+<title>Практична робота</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -19,11 +19,11 @@ button{padding:10px;margin-top:10px}
 <h2>Практична робота</h2>
 
 <div id="start">
-<input id="name" placeholder="Прізвище Ім'я"><br><br>
-<input id="class" placeholder="Клас"><br><br>
-<input id="code" placeholder="Код доступу"><br><br>
+<input id="name" placeholder="ПІБ"><br><br>
+<input id="classInput" placeholder="Клас"><br><br>
+<input id="code" placeholder="Код"><br><br>
 
-<button onclick="startTest()">Старт</button>
+<button id="startBtn">Старт</button>
 </div>
 
 <div id="test" class="hidden">
@@ -38,7 +38,7 @@ button{padding:10px;margin-top:10px}
 <h3>Частина 3</h3>
 <textarea id="p3"></textarea>
 
-<button onclick="finish()">Завершити</button>
+<button id="finishBtn">Завершити</button>
 </div>
 
 <div id="result" class="hidden">
@@ -49,46 +49,27 @@ button{padding:10px;margin-top:10px}
 
 <script>
 
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
-const ACCESS_CODE="1234";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
 
 let startTime;
-let timeLimit=40*60;
 let timerInterval;
 
-// 🔧 DOM
-const nameInput = document.getElementById("name");
-const classInput = document.getElementById("class");
-const codeInput = document.getElementById("code");
+// ===== СТАРТ =====
+document.getElementById("startBtn").addEventListener("click", startTest);
 
-const startDiv = document.getElementById("start");
-const testDiv = document.getElementById("test");
-const resultDiv = document.getElementById("result");
-
-const timerEl = document.getElementById("timer");
-const finalEl = document.getElementById("final");
-const chartEl = document.getElementById("chart");
-
-// 🚀 START
 function startTest(){
 
-if(!nameInput.value){
-alert("Введіть ПІБ");
-return;
-}
-
-if(codeInput.value!==ACCESS_CODE){
-alert("Невірний код");
-return;
-}
+const name = document.getElementById("name").value;
+const className = document.getElementById("classInput").value;
+const code = document.getElementById("code").value;
 
 fetch(SCRIPT_URL,{
 method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 action:"checkAttempt",
-name:name.value,
-code:code.value
+name:name,
+code:code
 })
 })
 .then(r=>r.text())
@@ -99,60 +80,76 @@ alert("Ви вже проходили тест");
 return;
 }
 
-startDiv.classList.add("hidden");
-testDiv.classList.remove("hidden");
+if(res==="NOT_FOUND"){
+alert("Невірні дані");
+return;
+}
 
-startTime=Date.now();
+document.getElementById("start").classList.add("hidden");
+document.getElementById("test").classList.remove("hidden");
+
+startTime = Date.now();
 startTimer();
 
 });
+
 }
 
-// ⏱ TIMER
+// ===== ТАЙМЕР =====
 function startTimer(){
-timerInterval=setInterval(()=>{
-let t=timeLimit-Math.floor((Date.now()-startTime)/1000);
-timerEl.innerText="Час: "+t+" сек";
+
+timerInterval = setInterval(()=>{
+
+let t = 2400 - Math.floor((Date.now()-startTime)/1000);
+document.getElementById("timer").innerText = "Час: "+t;
 
 if(t<=0){
 clearInterval(timerInterval);
 finish();
 }
+
 },1000);
+
 }
 
-// 📤 FINISH
+// ===== ФІНІШ =====
+document.getElementById("finishBtn").addEventListener("click", finish);
+
 function finish(){
 
 clearInterval(timerInterval);
+
+const name = document.getElementById("name").value;
+const className = document.getElementById("classInput").value;
+const code = document.getElementById("code").value;
 
 fetch(SCRIPT_URL,{
 method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 action:"submit",
-name:name.value,
-code:code.value,
-class:class.value,
-p1:p1.value,
-p2:p2.value,
-p3:p3.value,
-time:...
+name:name,
+class:className,
+code:code,
+p1:document.getElementById("p1").value,
+p2:document.getElementById("p2").value,
+p3:document.getElementById("p3").value,
+time:Math.floor((Date.now()-startTime)/1000)
 })
 })
 .then(r=>r.json())
 .then(ai=>{
 
-testDiv.classList.add("hidden");
-resultDiv.classList.remove("hidden");
+document.getElementById("test").classList.add("hidden");
+document.getElementById("result").classList.remove("hidden");
 
-finalEl.innerHTML=`
+document.getElementById("final").innerHTML = `
 Бал: ${ai.total}/12 <br>
 Рівень: ${ai.level}<br><br>
 ${ai.comment}
 `;
 
-new Chart(chartEl,{
+new Chart(document.getElementById("chart"),{
 type:"bar",
 data:{
 labels:["1","2","3"],
@@ -161,9 +158,12 @@ datasets:[{data:[ai.p1,ai.p2,ai.p3]}]
 });
 
 });
+
 }
 
 </script>
 
+</body>
+</html>
 </body>
 </html>
