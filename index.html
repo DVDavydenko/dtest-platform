@@ -1,167 +1,433 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8">
-<title>Практична робота</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px}
-.hidden{display:none}
-textarea{width:100%;height:120px;margin:10px 0}
-button{padding:10px;margin-top:10px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Практична робота — Політичний вибір українців</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px;
+      line-height: 1.5;
+      background: #f7f7f7;
+      color: #222;
+    }
+    .card{
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+    .hidden{display:none}
+    input, textarea{
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin: 8px 0 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    textarea{
+      min-height: 180px;
+      resize: vertical;
+    }
+    button{
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1d4ed8;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    button:hover{background:#1e40af}
+    .muted{color:#555}
+    .section{
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid #e5e5e5;
+    }
+    .notice{
+      background:#eef6ff;
+      border:1px solid #cfe4ff;
+      padding:14px;
+      border-radius:10px;
+      margin-bottom:16px;
+    }
+    .source{
+      background:#f9fafb;
+      border-left:4px solid #d4af37;
+      padding:12px 14px;
+      margin:12px 0;
+      border-radius:8px;
+    }
+    .error{
+      color:#b91c1c;
+      font-weight:600;
+      margin-top: 6px;
+    }
+    .success{
+      color:#166534;
+      font-weight:600;
+    }
+    .timer{
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .result-box{
+      background:#f8fafc;
+      border:1px solid #dbeafe;
+      padding:18px;
+      border-radius:12px;
+      margin-top:16px;
+    }
+    ul{margin-top: 8px}
+  </style>
 </head>
-
 <body>
+  <div class="card">
+    <h1>Практична робота</h1>
+    <p class="muted">
+      Тема: Політизація українського національного руху наприкінці XIX — на початку XX століття
+    </p>
 
-<h2>Практична робота</h2>
+    <!-- Вхід -->
+    <div id="startBlock">
+      <div class="notice">
+        <strong>Увага:</strong> для входу використайте своє повне ім’я так, як воно внесене в таблицю вчителя, і свій індивідуальний код.
+      </div>
 
-<div id="start">
-<input id="name" placeholder="ПІБ"><br><br>
-<input id="classInput" placeholder="Клас"><br><br>
-<input id="code" placeholder="Код"><br><br>
+      <label for="studentName">Прізвище Ім’я По батькові</label>
+      <input id="studentName" type="text" placeholder="Наприклад: Перфільєв Денис Олексійович">
 
-<button id="startBtn">Старт</button>
-</div>
+      <label for="studentClass">Клас</label>
+      <input id="studentClass" type="text" placeholder="Наприклад: 9-Б">
 
-<div id="test" class="hidden">
-<p id="timer"></p>
+      <label for="studentCode">Код учня</label>
+      <input id="studentCode" type="text" placeholder="Наприклад: ПД">
 
-<h3>Частина 1</h3>
-<textarea id="p1"></textarea>
+      <button id="startBtn" type="button">Старт</button>
+      <div id="startError" class="error"></div>
+    </div>
 
-<h3>Частина 2</h3>
-<textarea id="p2"></textarea>
+    <!-- Тест -->
+    <div id="testBlock" class="hidden">
+      <div class="timer" id="timer">Час: 40:00</div>
 
-<h3>Частина 3</h3>
-<textarea id="p3"></textarea>
+      <div class="notice">
+        <strong>Комплексне практичне завдання:</strong> «Політичний вибір українців на зламі століть»
+      </div>
 
-<button id="finishBtn">Завершити</button>
-</div>
+      <div class="section">
+        <h2>Частина 1. Робота з першоджерелом (Аналіз текстів)</h2>
+        <p>Опрацюйте історичні джерела та дайте відповіді на запитання.</p>
 
-<div id="result" class="hidden">
-<h3>Результат</h3>
-<div id="final"></div>
-<canvas id="chart"></canvas>
-</div>
+        <div class="source">
+          <strong>Джерело А (М. Міхновський, «Самостійна Україна», 1900 р.):</strong><br>
+          «...одна, єдина, неподільна, вільна, самостійна Україна від Карпатів аж по Кавказ... Усі, хто на цілій Україні не за нас, ті проти нас. Ми не хочемо довше зносити панування чужинців, не хочемо більше зневаги на нашій землі...»
+        </div>
 
-<script>
+        <div class="source">
+          <strong>Джерело Б (з програми Української демократичної партії, 1904 р.):</strong><br>
+          «Головні принципи нашої програми: знищення абсолютизму в Росії і запровадження парламентського ладу... Автономія України з власною крайовою радою (сеймом)... Рівноправність усіх націй і мов...»
+        </div>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
+        <p>Дайте відповіді:</p>
+        <ul>
+          <li>Яку форму державного устрою пропонує кожен документ?</li>
+          <li>Які аргументи або цілі вони наводять на користь своєї позиції?</li>
+          <li>Чиє бачення було більш реалістичним для 1900–1905 років? Обґрунтуйте.</li>
+        </ul>
 
-let startTime;
-let timerInterval;
+        <textarea id="p1" placeholder="Напишіть розгорнуту відповідь до частини 1..."></textarea>
+      </div>
 
-// ===== СТАРТ =====
-document.getElementById("startBtn").addEventListener("click", startTest);
+      <div class="section">
+        <h2>Частина 2. Історична дилема (Есе)</h2>
+        <p>
+          Уявіть себе молодим студентом Харківського університету в 1902 році. Ви прагнете долучитися до національного руху і маєте обрати, до якої організації приєднатися: <strong>РУП</strong> (яка поступово переходить до ідей соціалізму та автономії) чи <strong>УНП</strong> (радикальних націоналістів-самостійників).
+        </p>
+        <p>
+          Напишіть коротке есе-рефлексію (5–10 речень), зважуючи всі «за» і «проти» соціалістичного автономізму та радикального самостійництва від імені людини того часу. Зробіть та обґрунтуйте свій вибір.
+        </p>
 
-function startTest(){
+        <textarea id="p2" placeholder="Напишіть есе..."></textarea>
+      </div>
 
-const name = document.getElementById("name").value;
-const className = document.getElementById("classInput").value;
-const code = document.getElementById("code").value;
+      <div class="section">
+        <h2>Частина 3. Порівняльний аналіз</h2>
+        <p>
+          Порівняйте можливості для політичної діяльності в Російській та Австро-Угорській імперіях на початку XX ст. за критеріями:
+        </p>
+        <ul>
+          <li>цензура і мова;</li>
+          <li>можливість легального створення політичних партій;</li>
+          <li>парламентська діяльність (вибори).</li>
+        </ul>
 
-fetch(SCRIPT_URL,{
-method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-action:"checkAttempt",
-name:name,
-code:code
-})
-})
-.then(r=>r.text())
-.then(res=>{
+        <textarea id="p3" placeholder="Напишіть порівняльний аналіз..."></textarea>
+      </div>
 
-if(res==="BLOCK"){
-alert("Ви вже проходили тест");
-return;
-}
+      <div class="section">
+        <button id="finishBtn" type="button">Завершити і здати роботу</button>
+        <div id="submitError" class="error"></div>
+      </div>
+    </div>
 
-if(res==="NOT_FOUND"){
-alert("Невірні дані");
-return;
-}
+    <!-- Результат -->
+    <div id="resultBlock" class="hidden">
+      <h2>Результат</h2>
+      <div id="finalResult" class="result-box"></div>
+      <div style="margin-top:20px;">
+        <canvas id="resultChart"></canvas>
+      </div>
+    </div>
+  </div>
 
-document.getElementById("start").classList.add("hidden");
-document.getElementById("test").classList.remove("hidden");
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
 
-startTime = Date.now();
-startTimer();
+    const startBlock = document.getElementById("startBlock");
+    const testBlock = document.getElementById("testBlock");
+    const resultBlock = document.getElementById("resultBlock");
 
-});
+    const studentNameEl = document.getElementById("studentName");
+    const studentClassEl = document.getElementById("studentClass");
+    const studentCodeEl = document.getElementById("studentCode");
 
-}
+    const startBtn = document.getElementById("startBtn");
+    const finishBtn = document.getElementById("finishBtn");
 
-// ===== ТАЙМЕР =====
-function startTimer(){
+    const startErrorEl = document.getElementById("startError");
+    const submitErrorEl = document.getElementById("submitError");
 
-timerInterval = setInterval(()=>{
+    const p1El = document.getElementById("p1");
+    const p2El = document.getElementById("p2");
+    const p3El = document.getElementById("p3");
 
-let t = 2400 - Math.floor((Date.now()-startTime)/1000);
-document.getElementById("timer").innerText = "Час: "+t;
+    const timerEl = document.getElementById("timer");
+    const finalResultEl = document.getElementById("finalResult");
+    const chartEl = document.getElementById("resultChart");
 
-if(t<=0){
-clearInterval(timerInterval);
-finish();
-}
+    let startTime = null;
+    let timerInterval = null;
+    let chartInstance = null;
+    const timeLimitSeconds = 40 * 60;
 
-},1000);
+    startBtn.addEventListener("click", startTest);
+    finishBtn.addEventListener("click", finishTest);
 
-}
+    function normalizeText(v) {
+      return (v || "").trim();
+    }
 
-// ===== ФІНІШ =====
-document.getElementById("finishBtn").addEventListener("click", finish);
+    async function startTest() {
+      startErrorEl.textContent = "";
 
-function finish(){
+      const studentName = normalizeText(studentNameEl.value);
+      const studentClass = normalizeText(studentClassEl.value);
+      const studentCode = normalizeText(studentCodeEl.value);
 
-clearInterval(timerInterval);
+      if (!studentName || !studentClass || !studentCode) {
+        startErrorEl.textContent = "Заповніть усі поля для входу.";
+        return;
+      }
 
-const name = document.getElementById("name").value;
-const className = document.getElementById("classInput").value;
-const code = document.getElementById("code").value;
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "checkAttempt",
+            name: studentName,
+            class: studentClass,
+            code: studentCode
+          })
+        });
 
-fetch(SCRIPT_URL,{
-method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-action:"submit",
-name:name,
-class:className,
-code:code,
-p1:document.getElementById("p1").value,
-p2:document.getElementById("p2").value,
-p3:document.getElementById("p3").value,
-time:Math.floor((Date.now()-startTime)/1000)
-})
-})
-.then(r=>r.json())
-.then(ai=>{
+        const text = await res.text();
 
-document.getElementById("test").classList.add("hidden");
-document.getElementById("result").classList.remove("hidden");
+        if (text === "BLOCK") {
+          startErrorEl.textContent = "Ви вже використали свою спробу або не маєте права повторного входу.";
+          return;
+        }
 
-document.getElementById("final").innerHTML = `
-Бал: ${ai.total}/12 <br>
-Рівень: ${ai.level}<br><br>
-${ai.comment}
-`;
+        if (text === "NOT_FOUND") {
+          startErrorEl.textContent = "Учня з таким ПІБ і кодом не знайдено. Перевірте дані.";
+          return;
+        }
 
-new Chart(document.getElementById("chart"),{
-type:"bar",
-data:{
-labels:["1","2","3"],
-datasets:[{data:[ai.p1,ai.p2,ai.p3]}]
-}
-});
+        if (text !== "OK") {
+          startErrorEl.textContent = "Сервер повернув неочікувану відповідь: " + text;
+          return;
+        }
 
-});
+        startBlock.classList.add("hidden");
+        testBlock.classList.remove("hidden");
 
-}
+        startTime = Date.now();
+        startTimer();
+      } catch (err) {
+        startErrorEl.textContent = "Помилка зв’язку із сервером: " + err.message;
+      }
+    }
 
-</script>
+    function startTimer() {
+      updateTimer();
 
+      timerInterval = setInterval(() => {
+        updateTimer();
+
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = timeLimitSeconds - elapsed;
+
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          finishTest();
+        }
+      }, 1000);
+    }
+
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, timeLimitSeconds - elapsed);
+
+      const min = Math.floor(remaining / 60);
+      const sec = remaining % 60;
+
+      timerEl.textContent = `Час: ${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    }
+
+    async function finishTest() {
+      submitErrorEl.textContent = "";
+      finishBtn.disabled = true;
+
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+
+      const studentName = normalizeText(studentNameEl.value);
+      const studentClass = normalizeText(studentClassEl.value);
+      const studentCode = normalizeText(studentCodeEl.value);
+
+      const p1 = p1El.value;
+      const p2 = p2El.value;
+      const p3 = p3El.value;
+
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "submit",
+            name: studentName,
+            class: studentClass,
+            code: studentCode,
+            p1,
+            p2,
+            p3,
+            time: timeSpent
+          })
+        });
+
+        const text = await res.text();
+
+        if (text === "BLOCK") {
+          submitErrorEl.textContent = "Спробу вже використано.";
+          finishBtn.disabled = false;
+          return;
+        }
+
+        if (text === "NOT_FOUND") {
+          submitErrorEl.textContent = "Учня не знайдено в системі.";
+          finishBtn.disabled = false;
+          return;
+        }
+
+        let ai;
+        try {
+          ai = JSON.parse(text);
+        } catch {
+          submitErrorEl.textContent = "Сервер повернув не JSON: " + text;
+          finishBtn.disabled = false;
+          return;
+        }
+
+        testBlock.classList.add("hidden");
+        resultBlock.classList.remove("hidden");
+
+        finalResultEl.innerHTML = `
+          <p><strong>Учень:</strong> ${escapeHtml(studentName)} (${escapeHtml(studentClass)})</p>
+          <p><strong>Бал:</strong> ${ai.total}/12</p>
+          <p><strong>Рівень:</strong> ${escapeHtml(ai.level)}</p>
+          <p><strong>Коментар:</strong> ${escapeHtml(ai.comment)}</p>
+          <p><strong>Час виконання:</strong> ${formatDuration(timeSpent)}</p>
+        `;
+
+        renderChart(ai);
+      } catch (err) {
+        submitErrorEl.textContent = "Помилка під час надсилання: " + err.message;
+        finishBtn.disabled = false;
+      }
+    }
+
+    function renderChart(ai) {
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(chartEl, {
+        type: "bar",
+        data: {
+          labels: ["Частина 1", "Частина 2", "Частина 3"],
+          datasets: [{
+            label: "Бали",
+            data: [ai.p1, ai.p2, ai.p3]
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 4,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function formatDuration(totalSeconds) {
+      const min = Math.floor(totalSeconds / 60);
+      const sec = totalSeconds % 60;
+      return `${min} хв ${sec} с`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    window.onbeforeunload = function () {
+      if (!testBlock.classList.contains("hidden") && resultBlock.classList.contains("hidden")) {
+        return "Незбережена робота буде втрачена.";
+      }
+    };
+  </script>
 </body>
 </html>
