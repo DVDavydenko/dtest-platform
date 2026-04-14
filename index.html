@@ -70,6 +70,7 @@
       color:#b91c1c;
       font-weight:600;
       margin-top: 6px;
+      white-space: pre-wrap;
     }
     .success{
       color:#166534;
@@ -88,6 +89,16 @@
       margin-top:16px;
     }
     ul{margin-top: 8px}
+    .debug{
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #334155;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -97,7 +108,6 @@
       Тема: Політизація українського національного руху наприкінці XIX — на початку XX століття
     </p>
 
-    <!-- Вхід -->
     <div id="startBlock">
       <div class="notice">
         <strong>Увага:</strong> для входу використайте своє повне ім’я так, як воно внесене в таблицю вчителя, і свій індивідуальний код.
@@ -114,9 +124,9 @@
 
       <button id="startBtn" type="button">Старт</button>
       <div id="startError" class="error"></div>
+      <div id="debugBox" class="debug hidden"></div>
     </div>
 
-    <!-- Тест -->
     <div id="testBlock" class="hidden">
       <div class="timer" id="timer">Час: 40:00</div>
 
@@ -180,7 +190,6 @@
       </div>
     </div>
 
-    <!-- Результат -->
     <div id="resultBlock" class="hidden">
       <h2>Результат</h2>
       <div id="finalResult" class="result-box"></div>
@@ -206,6 +215,7 @@
 
     const startErrorEl = document.getElementById("startError");
     const submitErrorEl = document.getElementById("submitError");
+    const debugBoxEl = document.getElementById("debugBox");
 
     const p1El = document.getElementById("p1");
     const p2El = document.getElementById("p2");
@@ -223,12 +233,29 @@
     startBtn.addEventListener("click", startTest);
     finishBtn.addEventListener("click", finishTest);
 
+    function showDebug(msg) {
+      debugBoxEl.classList.remove("hidden");
+      debugBoxEl.textContent = msg;
+    }
+
+    function clearDebug() {
+      debugBoxEl.classList.add("hidden");
+      debugBoxEl.textContent = "";
+    }
+
     function normalizeText(v) {
       return (v || "").trim();
     }
 
+    async function pingServer() {
+      const res = await fetch(SCRIPT_URL, { method: "GET" });
+      const text = await res.text();
+      return text;
+    }
+
     async function startTest() {
       startErrorEl.textContent = "";
+      clearDebug();
 
       const studentName = normalizeText(studentNameEl.value);
       const studentClass = normalizeText(studentClassEl.value);
@@ -240,6 +267,9 @@
       }
 
       try {
+        const ping = await pingServer();
+        showDebug("GET server check: " + ping);
+
         const res = await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -252,6 +282,7 @@
         });
 
         const text = await res.text();
+        showDebug("POST checkAttempt response: " + text);
 
         if (text === "BLOCK") {
           startErrorEl.textContent = "Ви вже використали свою спробу або не маєте права повторного входу.";
@@ -259,12 +290,13 @@
         }
 
         if (text === "NOT_FOUND") {
-          startErrorEl.textContent = "Учня з таким ПІБ і кодом не знайдено. Перевірте дані.";
+          startErrorEl.textContent = "Учня з таким ПІБ, класом і кодом не знайдено. Перевірте дані.";
           return;
         }
 
         if (text !== "OK") {
-          startErrorEl.textContent = "Сервер повернув неочікувану відповідь: " + text;
+          startErrorEl.textContent = "Сервер повернув неочікувану відповідь.";
+          showDebug("Unexpected response: " + text);
           return;
         }
 
@@ -275,6 +307,7 @@
         startTimer();
       } catch (err) {
         startErrorEl.textContent = "Помилка зв’язку із сервером: " + err.message;
+        showDebug("Fetch error on start: " + (err && err.stack ? err.stack : err));
       }
     }
 
@@ -339,6 +372,7 @@
         });
 
         const text = await res.text();
+        showDebug("POST submit response: " + text);
 
         if (text === "BLOCK") {
           submitErrorEl.textContent = "Спробу вже використано.";
@@ -356,7 +390,8 @@
         try {
           ai = JSON.parse(text);
         } catch {
-          submitErrorEl.textContent = "Сервер повернув не JSON: " + text;
+          submitErrorEl.textContent = "Сервер повернув не JSON.";
+          showDebug("Non-JSON submit response: " + text);
           finishBtn.disabled = false;
           return;
         }
@@ -375,6 +410,7 @@
         renderChart(ai);
       } catch (err) {
         submitErrorEl.textContent = "Помилка під час надсилання: " + err.message;
+        showDebug("Fetch error on submit: " + (err && err.stack ? err.stack : err));
         finishBtn.disabled = false;
       }
     }
@@ -399,9 +435,7 @@
             y: {
               beginAtZero: true,
               max: 4,
-              ticks: {
-                stepSize: 1
-              }
+              ticks: { stepSize: 1 }
             }
           }
         }
