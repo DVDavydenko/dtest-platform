@@ -85,6 +85,16 @@
       margin-top:16px;
     }
     ul{margin-top: 8px}
+    .debug{
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #334155;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -110,6 +120,7 @@
 
       <button id="startBtn" type="button">Старт</button>
       <div id="startError" class="error"></div>
+      <div id="debugBox" class="debug hidden"></div>
     </div>
 
     <div id="testBlock" class="hidden">
@@ -184,15 +195,8 @@
     </div>
   </div>
 
-  <!-- hidden iframe + form -->
-  <iframe name="gsFrame" id="gsFrame" class="hidden"></iframe>
-
-  <form id="gsForm" method="POST" target="gsFrame" class="hidden">
-    <input type="hidden" name="payload" id="payloadInput">
-  </form>
-
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzjBrA7dkLLPoI2XpKd-y5QEJLTZz1miA6uwwusSXOkQqqQFYjxeZYtvTj2QiGSv4EM/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
 
     const startBlock = document.getElementById("startBlock");
     const testBlock = document.getElementById("testBlock");
@@ -207,6 +211,7 @@
 
     const startErrorEl = document.getElementById("startError");
     const submitErrorEl = document.getElementById("submitError");
+    const debugBoxEl = document.getElementById("debugBox");
 
     const p1El = document.getElementById("p1");
     const p2El = document.getElementById("p2");
@@ -216,28 +221,41 @@
     const finalResultEl = document.getElementById("finalResult");
     const chartEl = document.getElementById("resultChart");
 
-    const gsForm = document.getElementById("gsForm");
-    const payloadInput = document.getElementById("payloadInput");
-    const gsFrame = document.getElementById("gsFrame");
-
     let startTime = null;
     let timerInterval = null;
     let chartInstance = null;
-    let pendingAction = null;
-
     const timeLimitSeconds = 40 * 60;
-
-    gsForm.action = SCRIPT_URL;
 
     startBtn.addEventListener("click", startTest);
     finishBtn.addEventListener("click", finishTest);
+
+    function showDebug(msg) {
+      debugBoxEl.classList.remove("hidden");
+      debugBoxEl.textContent = msg;
+    }
 
     function normalizeText(v) {
       return (v || "").trim();
     }
 
-    function startTest() {
+    async function postForm(data) {
+      const body = new URLSearchParams();
+      Object.keys(data).forEach(key => body.append(key, data[key]));
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: body.toString()
+      });
+
+      return await res.text();
+    }
+
+    async function startTest() {
       startErrorEl.textContent = "";
+      showDebug("");
 
       const studentName = normalizeText(studentNameEl.value);
       const studentClass = normalizeText(studentClassEl.value);
@@ -248,120 +266,40 @@
         return;
       }
 
-      pendingAction = "checkAttempt";
-
-      postToAppsScript({
-        action: "checkAttempt",
-        name: studentName,
-        class: studentClass,
-        code: studentCode
-      });
-    }
-
-    function finishTest() {
-      submitErrorEl.textContent = "";
-      finishBtn.disabled = true;
-
-      if (timerInterval) clearInterval(timerInterval);
-
-      const studentName = normalizeText(studentNameEl.value);
-      const studentClass = normalizeText(studentClassEl.value);
-      const studentCode = normalizeText(studentCodeEl.value);
-
-      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-
-      pendingAction = "submit";
-
-      postToAppsScript({
-        action: "submit",
-        name: studentName,
-        class: studentClass,
-        code: studentCode,
-        p1: p1El.value,
-        p2: p2El.value,
-        p3: p3El.value,
-        time: timeSpent
-      });
-    }
-
-    function postToAppsScript(obj) {
-      payloadInput.value = JSON.stringify(obj);
-      gsForm.submit();
-    }
-
-    // Обробка відповіді з iframe
-    gsFrame.addEventListener("load", () => {
       try {
-        const frameDoc = gsFrame.contentDocument || gsFrame.contentWindow.document;
-        const text = (frameDoc.body.innerText || frameDoc.body.textContent || "").trim();
+        const text = await postForm({
+          action: "checkAttempt",
+          name: studentName,
+          class: studentClass,
+          code: studentCode
+        });
 
-        if (!text) return;
+        showDebug("checkAttempt response: " + text);
 
-        if (pendingAction === "checkAttempt") {
-          if (text === "OK") {
-            startBlock.classList.add("hidden");
-            testBlock.classList.remove("hidden");
-            startTime = Date.now();
-            startTimer();
-            return;
-          }
-          if (text === "BLOCK") {
-            startErrorEl.textContent = "Ви вже використали свою спробу.";
-            return;
-          }
-          if (text === "NOT_FOUND") {
-            startErrorEl.textContent = "Учня з таким ПІБ, класом і кодом не знайдено.";
-            return;
-          }
-          startErrorEl.textContent = "Сервер повернув: " + text;
+        if (text === "OK") {
+          startBlock.classList.add("hidden");
+          testBlock.classList.remove("hidden");
+          startTime = Date.now();
+          startTimer();
           return;
         }
 
-        if (pendingAction === "submit") {
-          if (text === "BLOCK") {
-            submitErrorEl.textContent = "Спробу вже використано.";
-            finishBtn.disabled = false;
-            return;
-          }
-          if (text === "NOT_FOUND") {
-            submitErrorEl.textContent = "Учня не знайдено в системі.";
-            finishBtn.disabled = false;
-            return;
-          }
-
-          let ai;
-          try {
-            ai = JSON.parse(text);
-          } catch {
-            submitErrorEl.textContent = "Сервер повернув не JSON: " + text;
-            finishBtn.disabled = false;
-            return;
-          }
-
-          testBlock.classList.add("hidden");
-          resultBlock.classList.remove("hidden");
-
-          const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-
-          finalResultEl.innerHTML = `
-            <p><strong>Учень:</strong> ${escapeHtml(studentNameEl.value)} (${escapeHtml(studentClassEl.value)})</p>
-            <p><strong>Бал:</strong> ${ai.total}/12</p>
-            <p><strong>Рівень:</strong> ${escapeHtml(ai.level)}</p>
-            <p><strong>Коментар:</strong> ${escapeHtml(ai.comment)}</p>
-            <p><strong>Час виконання:</strong> ${formatDuration(timeSpent)}</p>
-          `;
-
-          renderChart(ai);
+        if (text === "BLOCK") {
+          startErrorEl.textContent = "Ви вже використали свою спробу.";
+          return;
         }
-      } catch (e) {
-        if (pendingAction === "checkAttempt") {
-          startErrorEl.textContent = "Не вдалося прочитати відповідь сервера.";
-        } else if (pendingAction === "submit") {
-          submitErrorEl.textContent = "Не вдалося прочитати відповідь сервера.";
-          finishBtn.disabled = false;
+
+        if (text === "NOT_FOUND") {
+          startErrorEl.textContent = "Учня з таким ПІБ, класом і кодом не знайдено.";
+          return;
         }
+
+        startErrorEl.textContent = "Сервер повернув: " + text;
+      } catch (err) {
+        startErrorEl.textContent = "Помилка зв’язку із сервером: " + err.message;
+        showDebug("Fetch error: " + err.message);
       }
-    });
+    }
 
     function startTimer() {
       updateTimer();
@@ -381,6 +319,70 @@
       const min = Math.floor(remaining / 60);
       const sec = remaining % 60;
       timerEl.textContent = `Час: ${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    }
+
+    async function finishTest() {
+      submitErrorEl.textContent = "";
+      finishBtn.disabled = true;
+      if (timerInterval) clearInterval(timerInterval);
+
+      const studentName = normalizeText(studentNameEl.value);
+      const studentClass = normalizeText(studentClassEl.value);
+      const studentCode = normalizeText(studentCodeEl.value);
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+
+      try {
+        const text = await postForm({
+          action: "submit",
+          name: studentName,
+          class: studentClass,
+          code: studentCode,
+          p1: p1El.value,
+          p2: p2El.value,
+          p3: p3El.value,
+          time: String(timeSpent)
+        });
+
+        showDebug("submit response: " + text);
+
+        if (text === "BLOCK") {
+          submitErrorEl.textContent = "Спробу вже використано.";
+          finishBtn.disabled = false;
+          return;
+        }
+
+        if (text === "NOT_FOUND") {
+          submitErrorEl.textContent = "Учня не знайдено в системі.";
+          finishBtn.disabled = false;
+          return;
+        }
+
+        let ai;
+        try {
+          ai = JSON.parse(text);
+        } catch {
+          submitErrorEl.textContent = "Сервер повернув не JSON: " + text;
+          finishBtn.disabled = false;
+          return;
+        }
+
+        testBlock.classList.add("hidden");
+        resultBlock.classList.remove("hidden");
+
+        finalResultEl.innerHTML = `
+          <p><strong>Учень:</strong> ${escapeHtml(studentName)} (${escapeHtml(studentClass)})</p>
+          <p><strong>Бал:</strong> ${ai.total}/12</p>
+          <p><strong>Рівень:</strong> ${escapeHtml(ai.level)}</p>
+          <p><strong>Коментар:</strong> ${escapeHtml(ai.comment)}</p>
+          <p><strong>Час виконання:</strong> ${formatDuration(timeSpent)}</p>
+        `;
+
+        renderChart(ai);
+      } catch (err) {
+        submitErrorEl.textContent = "Помилка під час надсилання: " + err.message;
+        showDebug("Submit fetch error: " + err.message);
+        finishBtn.disabled = false;
+      }
     }
 
     function renderChart(ai) {
