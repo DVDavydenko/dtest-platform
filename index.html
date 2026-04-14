@@ -85,6 +85,16 @@
       margin-top:16px;
     }
     ul{margin-top: 8px}
+    .debug{
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #334155;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -110,6 +120,7 @@
 
       <button id="startBtn" type="button">Старт</button>
       <div id="startError" class="error"></div>
+      <div id="debugBox" class="debug hidden"></div>
     </div>
 
     <div id="testBlock" class="hidden">
@@ -185,7 +196,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzjBrA7dkLLPoI2XpKd-y5QEJLTZz1miA6uwwusSXOkQqqQFYjxeZYtvTj2QiGSv4EM/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHHffT_k9VCWvAaNhCfeyMZh2pMIiPdKglCLW-gBEkKGQgTsuQjnqYLZojmlX2vsJ2/exec";
 
     const startBlock = document.getElementById("startBlock");
     const testBlock = document.getElementById("testBlock");
@@ -200,6 +211,7 @@
 
     const startErrorEl = document.getElementById("startError");
     const submitErrorEl = document.getElementById("submitError");
+    const debugBoxEl = document.getElementById("debugBox");
 
     const p1El = document.getElementById("p1");
     const p2El = document.getElementById("p2");
@@ -214,8 +226,66 @@
     let chartInstance = null;
     const timeLimitSeconds = 40 * 60;
 
+    const integrity = {
+      p1: createFieldMeta(),
+      p2: createFieldMeta(),
+      p3: createFieldMeta()
+    };
+
+    function createFieldMeta() {
+      return {
+        keydowns: 0,
+        inputs: 0,
+        pastes: 0,
+        deletes: 0,
+        focusCount: 0,
+        blurCount: 0,
+        activeMs: 0,
+        lastFocusAt: null
+      };
+    }
+
+    function attachIntegrityTracking(textarea, meta) {
+      textarea.addEventListener("focus", () => {
+        meta.focusCount++;
+        meta.lastFocusAt = Date.now();
+      });
+
+      textarea.addEventListener("blur", () => {
+        meta.blurCount++;
+        if (meta.lastFocusAt) {
+          meta.activeMs += Date.now() - meta.lastFocusAt;
+          meta.lastFocusAt = null;
+        }
+      });
+
+      textarea.addEventListener("keydown", (e) => {
+        meta.keydowns++;
+        if (e.key === "Backspace" || e.key === "Delete") {
+          meta.deletes++;
+        }
+      });
+
+      textarea.addEventListener("input", () => {
+        meta.inputs++;
+      });
+
+      textarea.addEventListener("paste", () => {
+        meta.pastes++;
+      });
+    }
+
+    attachIntegrityTracking(p1El, integrity.p1);
+    attachIntegrityTracking(p2El, integrity.p2);
+    attachIntegrityTracking(p3El, integrity.p3);
+
     startBtn.addEventListener("click", startTest);
     finishBtn.addEventListener("click", finishTest);
+
+    function showDebug(msg) {
+      debugBoxEl.classList.remove("hidden");
+      debugBoxEl.textContent = msg;
+    }
 
     function normalizeText(v) {
       return (v || "").trim();
@@ -231,6 +301,70 @@
       });
 
       return await res.text();
+    }
+
+    function finalizeFieldMeta(text, meta) {
+      const finalLength = text.length;
+      const actions = meta.keydowns + meta.inputs + meta.pastes;
+      const charPerAction = actions > 0 ? (finalLength / actions) : finalLength;
+
+      let risk = "низький";
+      if (meta.pastes >= 2 || (finalLength > 300 && meta.keydowns < 20)) {
+        risk = "високий";
+      } else if (meta.pastes === 1 || charPerAction > 4) {
+        risk = "середній";
+      }
+
+      return {
+        ...meta,
+        finalLength,
+        actions,
+        charPerAction: Number(charPerAction.toFixed(2)),
+        risk
+      };
+    }
+
+    function computeIntegrityIndex(metaList) {
+      let score = 100;
+      const reasons = [];
+
+      metaList.forEach((m, idx) => {
+        const partNum = idx + 1;
+
+        if (m.pastes >= 1) {
+          score -= 20 * m.pastes;
+          reasons.push(`частина ${partNum}: вставки (${m.pastes})`);
+        }
+
+        if (m.finalLength > 250 && m.keydowns < 20) {
+          score -= 20;
+          reasons.push(`частина ${partNum}: великий текст при дуже малій кількості натискань`);
+        }
+
+        if (m.charPerAction > 4) {
+          score -= 15;
+          reasons.push(`частина ${partNum}: нетипове співвідношення символів до дій`);
+        }
+
+        if (m.finalLength > 200 && m.activeMs < 30000) {
+          score -= 15;
+          reasons.push(`частина ${partNum}: дуже малий час активного введення`);
+        }
+      });
+
+      if (score < 0) score = 0;
+
+      let risk = "низький";
+      if (score < 50) risk = "високий";
+      else if (score < 80) risk = "середній";
+
+      return {
+        integrityScore: score,
+        integrityRisk: risk,
+        integrityComment: reasons.length
+          ? "Поведінкові маркери ризику: " + reasons.join("; ")
+          : "Поведінкових маркерів підвищеного ризику не виявлено."
+      };
     }
 
     async function startTest() {
@@ -274,6 +408,7 @@
         startErrorEl.textContent = "Сервер повернув: " + text;
       } catch (err) {
         startErrorEl.textContent = "Помилка зв’язку із сервером: " + err.message;
+        showDebug("Fetch error: " + err.message);
       }
     }
 
@@ -308,6 +443,11 @@
       const timeSpent = Math.floor((Date.now() - startTime) / 1000);
 
       try {
+        const p1Meta = finalizeFieldMeta(p1El.value, integrity.p1);
+        const p2Meta = finalizeFieldMeta(p2El.value, integrity.p2);
+        const p3Meta = finalizeFieldMeta(p3El.value, integrity.p3);
+        const integritySummary = computeIntegrityIndex([p1Meta, p2Meta, p3Meta]);
+
         const text = await postForm({
           action: "submit",
           name: studentName,
@@ -316,6 +456,12 @@
           p1: p1El.value,
           p2: p2El.value,
           p3: p3El.value,
+          p1_meta: JSON.stringify(p1Meta),
+          p2_meta: JSON.stringify(p2Meta),
+          p3_meta: JSON.stringify(p3Meta),
+          integrity_score: String(integritySummary.integrityScore),
+          integrity_risk: integritySummary.integrityRisk,
+          integrity_comment: integritySummary.integrityComment,
           time: String(timeSpent)
         });
 
@@ -331,9 +477,9 @@
           return;
         }
 
-        let ai;
+        let result;
         try {
-          ai = JSON.parse(text);
+          result = JSON.parse(text);
         } catch {
           submitErrorEl.textContent = "Сервер повернув не JSON: " + text;
           finishBtn.disabled = false;
@@ -345,20 +491,22 @@
 
         finalResultEl.innerHTML = `
           <p><strong>Учень:</strong> ${escapeHtml(studentName)} (${escapeHtml(studentClass)})</p>
-          <p><strong>Бал:</strong> ${ai.total}/12</p>
-          <p><strong>Рівень:</strong> ${escapeHtml(ai.level)}</p>
-          <p><strong>Коментар:</strong> ${escapeHtml(ai.comment)}</p>
+          <p><strong>Бал:</strong> ${result.total}/12</p>
+          <p><strong>Рівень:</strong> ${escapeHtml(result.level)}</p>
+          <p><strong>Коментар:</strong> ${escapeHtml(result.comment)}</p>
+          <p><strong>Індекс доброчесності:</strong> ${integritySummary.integrityScore}</p>
+          <p><strong>Рівень ризику:</strong> ${escapeHtml(integritySummary.integrityRisk)}</p>
           <p><strong>Час виконання:</strong> ${formatDuration(timeSpent)}</p>
         `;
 
-        renderChart(ai);
+        renderChart(result);
       } catch (err) {
         submitErrorEl.textContent = "Помилка під час надсилання: " + err.message;
         finishBtn.disabled = false;
       }
     }
 
-    function renderChart(ai) {
+    function renderChart(result) {
       if (chartInstance) chartInstance.destroy();
 
       chartInstance = new Chart(chartEl, {
@@ -367,7 +515,7 @@
           labels: ["Частина 1", "Частина 2", "Частина 3"],
           datasets: [{
             label: "Бали",
-            data: [ai.p1, ai.p2, ai.p3]
+            data: [result.p1, result.p2, result.p3]
           }]
         },
         options: {
