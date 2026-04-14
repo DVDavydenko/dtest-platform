@@ -85,16 +85,6 @@
       margin-top:16px;
     }
     ul{margin-top: 8px}
-    .debug{
-      margin-top: 12px;
-      padding: 10px 12px;
-      background: #f8fafc;
-      border: 1px dashed #94a3b8;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #334155;
-      white-space: pre-wrap;
-    }
   </style>
 </head>
 <body>
@@ -120,7 +110,6 @@
 
       <button id="startBtn" type="button">Старт</button>
       <div id="startError" class="error"></div>
-      <div id="debugBox" class="debug hidden"></div>
     </div>
 
     <div id="testBlock" class="hidden">
@@ -196,7 +185,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8zLs4aiWkxUi-c9q9l9MrXfG379Jw1cRwoU7ORADlbT3-MnXqLZJcuG2nwbzaotdE/exec";
+    const SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
 
     const startBlock = document.getElementById("startBlock");
     const testBlock = document.getElementById("testBlock");
@@ -211,7 +200,6 @@
 
     const startErrorEl = document.getElementById("startError");
     const submitErrorEl = document.getElementById("submitError");
-    const debugBoxEl = document.getElementById("debugBox");
 
     const p1El = document.getElementById("p1");
     const p2El = document.getElementById("p2");
@@ -229,11 +217,6 @@
     startBtn.addEventListener("click", startTest);
     finishBtn.addEventListener("click", finishTest);
 
-    function showDebug(msg) {
-      debugBoxEl.classList.remove("hidden");
-      debugBoxEl.textContent = msg;
-    }
-
     function normalizeText(v) {
       return (v || "").trim();
     }
@@ -244,10 +227,7 @@
 
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
-        body: body.toString()
+        body
       });
 
       return await res.text();
@@ -255,7 +235,6 @@
 
     async function startTest() {
       startErrorEl.textContent = "";
-      showDebug("");
 
       const studentName = normalizeText(studentNameEl.value);
       const studentClass = normalizeText(studentClassEl.value);
@@ -273,8 +252,6 @@
           class: studentClass,
           code: studentCode
         });
-
-        showDebug("checkAttempt response: " + text);
 
         if (text === "OK") {
           startBlock.classList.add("hidden");
@@ -297,7 +274,6 @@
         startErrorEl.textContent = "Сервер повернув: " + text;
       } catch (err) {
         startErrorEl.textContent = "Помилка зв’язку із сервером: " + err.message;
-        showDebug("Fetch error: " + err.message);
       }
     }
 
@@ -343,8 +319,6 @@
           time: String(timeSpent)
         });
 
-        showDebug("submit response: " + text);
-
         if (text === "BLOCK") {
           submitErrorEl.textContent = "Спробу вже використано.";
           finishBtn.disabled = false;
@@ -380,7 +354,6 @@
         renderChart(ai);
       } catch (err) {
         submitErrorEl.textContent = "Помилка під час надсилання: " + err.message;
-        showDebug("Submit fetch error: " + err.message);
         finishBtn.disabled = false;
       }
     }
